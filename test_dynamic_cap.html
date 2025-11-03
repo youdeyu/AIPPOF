@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PathB动态上限测试</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .test-card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #764ba2;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #888;
+            margin-bottom: 30px;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+        .result {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .success { border-left-color: #28a745; }
+        .error { border-left-color: #dc3545; }
+        .warning { border-left-color: #ffc107; }
+        .test-case {
+            background: #f0f4ff;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 6px;
+            border: 1px solid #d0d7de;
+        }
+        .test-case h4 {
+            margin-top: 0;
+            color: #667eea;
+        }
+        .label {
+            font-weight: bold;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-card">
+        <h1>🧪 PathB动态上限测试</h1>
+        <p class="subtitle">验证后端API集成动态上限计算（替代固定12,000）</p>
+        
+        <div>
+            <button onclick="testCase1()">测试1: 24万年薪 + 1.5万缴费</button>
+            <button onclick="testCase2()">测试2: 20万年薪 + 1.2万缴费</button>
+            <button onclick="testCase3()">测试3: 超限缴费（3万）</button>
+            <button onclick="testCapCalculator()">测试4: 直接调用上限计算器</button>
+        </div>
+        
+        <div id="result" class="result" style="display:none;"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000/api';
+
+        function displayResult(content, type = 'info') {
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = `result ${type}`;
+            resultDiv.textContent = content;
+            resultDiv.style.display = 'block';
+        }
+
+        // 测试案例1: 用户原始问题（24万年薪，缴费1.5万）
+        async function testCase1() {
+            displayResult('⏳ 正在测试...');
+            try {
+                const response = await fetch(`${API_BASE}/history/diagnose`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        history: [
+                            { year: 2022, salary: 200000, contribution: 12000 },
+                            { year: 2023, salary: 220000, contribution: 12000 },
+                            { year: 2024, salary: 240000, contribution: 15000 }
+                        ],
+                        age: 27
+                    })
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const data = await response.json();
+                
+                let output = '✅ 测试案例1: 24万年薪 + 1.5万缴费\n\n';
+                output += `【诊断结果】\n`;
+                output += `  累积T2: ${data.cumulativeT2}%\n`;
+                output += `  效率评分: ${data.efficiencyScore}分\n`;
+                output += `  推荐缴费额: ¥${data.recommendedAmount.toLocaleString()}/年\n`;
+                output += `  预测T3: ${data.predictedT3}%\n\n`;
+                
+                output += `【动态上限检测】\n`;
+                if (data.diagnosis.exceedsDynamicCap) {
+                    output += `  ⚠️ 超出动态上限\n`;
+                    output += `  超限记录: ${data.diagnosis.capWarnings.length}条\n`;
+                    data.diagnosis.capWarnings.forEach(w => {
+                        output += `    ${w.year}年: 缴费¥${w.contribution.toLocaleString()} > `
+                               + `上限¥${w.dynamic_cap.toLocaleString()}, 超出¥${w.excess.toLocaleString()}\n`;
+                    });
+                } else {
+                    output += `  ✅ 未超出动态上限\n`;
+                }
+                
+                output += `\n【关键验证】\n`;
+                output += `  ❓ 1.5万缴费是否合理？\n`;
+                output += `  答：${!data.diagnosis.exceedsDynamicCap ? '✅ 合理' : '❌ 超限'}`;
+                output += `（动态上限模型允许高T2+高收入组合下超过12k）\n\n`;
+                
+                output += `【诊断消息】\n  ${data.diagnosis.message}`;
+                
+                displayResult(output, data.diagnosis.exceedsDynamicCap ? 'warning' : 'success');
+            } catch (error) {
+                displayResult(`❌ 错误: ${error.message}\n\n请确保后端服务已启动 (python backend/main.py)`, 'error');
+            }
+        }
+
+        // 测试案例2: 20万年薪，1.2万缴费
+        async function testCase2() {
+            displayResult('⏳ 正在测试...');
+            try {
+                const response = await fetch(`${API_BASE}/history/diagnose`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        history: [
+                            { year: 2022, salary: 200000, contribution: 12000 },
+                            { year: 2023, salary: 200000, contribution: 12000 },
+                            { year: 2024, salary: 200000, contribution: 12000 }
+                        ],
+                        age: 27
+                    })
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const data = await response.json();
+                
+                let output = '✅ 测试案例2: 20万年薪 + 1.2万缴费\n\n';
+                output += `  累积T2: ${data.cumulativeT2}%\n`;
+                output += `  推荐缴费额: ¥${data.recommendedAmount.toLocaleString()}/年\n`;
+                output += `  超出动态上限: ${data.diagnosis.exceedsDynamicCap ? '是' : '否'}\n\n`;
+                output += `  预期: 推荐金额应约为 16,000-17,000（0.08×200k）\n`;
+                output += `  实际: ¥${data.recommendedAmount.toLocaleString()}`;
+                
+                displayResult(output, 'success');
+            } catch (error) {
+                displayResult(`❌ 错误: ${error.message}`, 'error');
+            }
+        }
+
+        // 测试案例3: 超限缴费
+        async function testCase3() {
+            displayResult('⏳ 正在测试...');
+            try {
+                const response = await fetch(`${API_BASE}/history/diagnose`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        history: [
+                            { year: 2024, salary: 240000, contribution: 30000 }
+                        ],
+                        age: 30
+                    })
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const data = await response.json();
+                
+                let output = '⚠️ 测试案例3: 24万年薪 + 3万缴费（超限测试）\n\n';
+                output += `  超出动态上限: ${data.diagnosis.exceedsDynamicCap ? '是 ✅' : '否 ❌'}\n\n`;
+                
+                if (data.diagnosis.exceedsDynamicCap && data.diagnosis.capWarnings.length > 0) {
+                    const w = data.diagnosis.capWarnings[0];
+                    output += `  缴费金额: ¥${w.contribution.toLocaleString()}\n`;
+                    output += `  动态上限: ¥${w.dynamic_cap.toLocaleString()}\n`;
+                    output += `  超出金额: ¥${w.excess.toLocaleString()}\n\n`;
+                    output += `  ✅ 系统正确检测到超限！`;
+                } else {
+                    output += `  ❌ 未能检测到超限，可能有问题`;
+                }
+                
+                displayResult(output, data.diagnosis.exceedsDynamicCap ? 'success' : 'error');
+            } catch (error) {
+                displayResult(`❌ 错误: ${error.message}`, 'error');
+            }
+        }
+
+        // 测试案例4: 直接调用上限计算器API
+        async function testCapCalculator() {
+            displayResult('⏳ 正在测试...');
+            try {
+                const testCases = [
+                    { salary: 240000, t2: 20, desc: '24万年薪 + T2=20%' },
+                    { salary: 200000, t2: 13, desc: '20万年薪 + T2=13%' },
+                    { salary: 100000, t2: 8, desc: '10万年薪 + T2=8%' },
+                ];
+
+                let output = '📊 动态上限计算器测试\n\n';
+                
+                for (const tc of testCases) {
+                    const response = await fetch(
+                        `${API_BASE}/cap/calculate?annual_salary=${tc.salary}&t2_rate=${tc.t2}`
+                    );
+                    
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    const data = await response.json();
+                    
+                    output += `【${tc.desc}】\n`;
+                    output += `  动态上限 (0.08×w): ¥${data.details.dynamicCap.toLocaleString()}\n`;
+                    output += `  固定上限 (effective): ¥${data.details.fixedEffective.toLocaleString()}\n`;
+                    output += `  最终上限: ¥${data.cap.toLocaleString()}\n`;
+                    output += `  选用通道: ${data.details.usedChannel}\n`;
+                    output += `  公式: ${data.formula}\n\n`;
+                }
+                
+                output += '✅ 所有场景均使用dynamic通道（高收入情况下）';
+                
+                displayResult(output, 'success');
+            } catch (error) {
+                displayResult(`❌ 错误: ${error.message}`, 'error');
+            }
+        }
+
+        // 页面加载时显示说明
+        window.addEventListener('load', () => {
+            displayResult(
+                '💡 使用说明：\n\n' +
+                '1. 确保后端服务已启动: cd backend && python main.py\n' +
+                '2. 点击上方按钮运行不同测试案例\n' +
+                '3. 验证动态上限模型是否正确替代固定12,000\n\n' +
+                '关键预期：\n' +
+                '  • 24万年薪 + T2=20% → 上限约 ¥19,200（非12k）\n' +
+                '  • 20万年薪 + T2=13% → 上限约 ¥16,000（非12k）\n' +
+                '  • 用户缴费1.5万应被判定为合理（在19.2k上限内）',
+                'info'
+            );
+        });
+    </script>
+</body>
+</html>

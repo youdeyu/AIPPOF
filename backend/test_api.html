@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AIPPOF API 测试界面</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif;
+            background: linear-gradient(135deg, #2C2A4A 0%, #1A3A52 100%);
+            min-height: 100vh;
+            color: white;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            background: linear-gradient(135deg, #a78bfa 0%, #60a5fa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .subtitle {
+            text-align: center;
+            margin-bottom: 40px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        .api-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        
+        .api-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 24px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .api-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(124, 58, 237, 0.3);
+        }
+        
+        .api-card h3 {
+            color: #a78bfa;
+            margin-bottom: 12px;
+            font-size: 1.3em;
+        }
+        
+        .api-card p {
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 16px;
+            line-height: 1.6;
+        }
+        
+        .endpoint {
+            background: rgba(124, 58, 237, 0.2);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            color: #c4b5fd;
+            margin-bottom: 12px;
+        }
+        
+        .test-btn {
+            background: #7C3AED;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            width: 100%;
+            transition: all 0.3s ease;
+        }
+        
+        .test-btn:hover {
+            background: #6d28d9;
+            box-shadow: 0 4px 15px rgba(124, 58, 237, 0.6);
+        }
+        
+        .result-area {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 24px;
+            margin-top: 40px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .result-area h2 {
+            color: #60a5fa;
+            margin-bottom: 16px;
+        }
+        
+        pre {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 16px;
+            border-radius: 8px;
+            overflow-x: auto;
+            color: #d1d5db;
+            line-height: 1.5;
+        }
+        
+        .status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+        
+        .status.running {
+            background: rgba(34, 197, 94, 0.2);
+            color: #86efac;
+            border: 1px solid rgba(34, 197, 94, 0.5);
+        }
+        
+        .status.error {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+            border: 1px solid rgba(239, 68, 68, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>AIPPOF API 测试控制台</h1>
+        <p class="subtitle">AI驱动个人养老金优化框架 - 后端API接口测试</p>
+        
+        <div id="server-status"></div>
+        
+        <div class="api-grid">
+            <div class="api-card">
+                <h3>📊 工资增长率预测</h3>
+                <p>基于行业、职级、年龄预测个人工资增长率</p>
+                <div class="endpoint">POST /api/predict-wage-growth</div>
+                <button class="test-btn" onclick="testWageGrowth()">测试预测</button>
+            </div>
+            
+            <div class="api-card">
+                <h3>💰 T2节税率计算</h3>
+                <p>计算平均节税率 T2 = t1/(1+r/g)^n</p>
+                <div class="endpoint">POST /api/calculate-t2</div>
+                <button class="test-btn" onclick="testT2()">测试计算</button>
+            </div>
+            
+            <div class="api-card">
+                <h3>📈 T3领取期税率</h3>
+                <p>双逻辑斯蒂函数计算累进税率（0-14%）</p>
+                <div class="endpoint">POST /api/calculate-t3</div>
+                <button class="test-btn" onclick="testT3()">测试计算</button>
+            </div>
+            
+            <div class="api-card">
+                <h3>🎯 推荐缴费额优化</h3>
+                <p>NPV最大化 + 补贴最大化综合优化</p>
+                <div class="endpoint">POST /api/optimize-contribution</div>
+                <button class="test-btn" onclick="testOptimize()">测试优化</button>
+            </div>
+            
+            <div class="api-card">
+                <h3>💵 NPV净现值计算</h3>
+                <p>全生命周期净现值计算（50年）</p>
+                <div class="endpoint">POST /api/calculate-npv</div>
+                <button class="test-btn" onclick="testNPV()">测试计算</button>
+            </div>
+            
+            <div class="api-card">
+                <h3>🔍 历史数据诊断</h3>
+                <p>分析历史缴费效率，给出优化建议</p>
+                <div class="endpoint">POST /api/diagnose-history</div>
+                <button class="test-btn" onclick="testDiagnose()">测试诊断</button>
+            </div>
+            
+            <div class="api-card">
+                <h3>📊 全周期数据生成</h3>
+                <p>生成50年全生命周期可视化数据</p>
+                <div class="endpoint">POST /api/lifecycle-data</div>
+                <button class="test-btn" onclick="testLifecycle()">测试生成</button>
+            </div>
+            
+            <div class="api-card">
+                <h3>📈 缴费额对比</h3>
+                <p>对比不同缴费额的NPV收益</p>
+                <div class="endpoint">POST /api/comparison-scenarios</div>
+                <button class="test-btn" onclick="testComparison()">测试对比</button>
+            </div>
+            
+            <div class="api-card">
+                <h3>⚠️ T3风险评估</h3>
+                <p>评估高收入群体领取期税率风险</p>
+                <div class="endpoint">POST /api/risk-assessment</div>
+                <button class="test-btn" onclick="testRisk()">测试评估</button>
+            </div>
+            
+            <div class="api-card">
+                <h3>🎯 最优缴费上限</h3>
+                <p>计算避免T3风险的最优上限</p>
+                <div class="endpoint">POST /api/optimal-cap</div>
+                <button class="test-btn" onclick="testOptimalCap()">测试计算</button>
+            </div>
+            
+            <div class="api-card">
+                <h3>🏦 财政影响分析</h3>
+                <p>分析政府现金流与财政平衡</p>
+                <div class="endpoint">POST /api/fiscal-analysis</div>
+                <button class="test-btn" onclick="testFiscal()">测试分析</button>
+            </div>
+        </div>
+        
+        <div class="result-area" id="result-area" style="display:none;">
+            <h2>测试结果</h2>
+            <pre id="result-content"></pre>
+        </div>
+    </div>
+    
+    <script>
+        const API_BASE = 'http://localhost:8000/api';
+        
+        // 检查服务器状态
+        async function checkServerStatus() {
+            const statusDiv = document.getElementById('server-status');
+            try {
+                const response = await fetch('http://localhost:8000/health');
+                if (response.ok) {
+                    statusDiv.innerHTML = '<div class="status running">🟢 服务器运行中 - http://localhost:8000</div>';
+                } else {
+                    statusDiv.innerHTML = '<div class="status error">🔴 服务器响应异常</div>';
+                }
+            } catch (error) {
+                statusDiv.innerHTML = '<div class="status error">🔴 无法连接到服务器</div>';
+            }
+        }
+        
+        function showResult(data) {
+            const resultArea = document.getElementById('result-area');
+            const resultContent = document.getElementById('result-content');
+            resultContent.textContent = JSON.stringify(data, null, 2);
+            resultArea.style.display = 'block';
+            resultArea.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        async function testWageGrowth() {
+            const data = {
+                age: 30,
+                annualSalary: 150000,
+                industry: 'it',
+                jobLevel: 'intermediate'
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE}/predict-wage-growth`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                showResult({ request: data, response: result });
+            } catch (error) {
+                showResult({ error: error.message });
+            }
+        }
+        
+        async function testT2() {
+            const data = {
+                age: 30,
+                annualSalary: 150000,
+                wageGrowthRate: 3.9
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE}/calculate-t2`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                showResult({ request: data, response: result });
+            } catch (error) {
+                showResult({ error: error.message });
+            }
+        }
+        
+        async function testT3() {
+            const data = {
+                t2: 1.4,
+                annualSalary: 150000,
+                age: 30
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE}/calculate-t3`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                showResult({ request: data, response: result });
+            } catch (error) {
+                showResult({ error: error.message });
+            }
+        }
+        
+        async function testOptimize() {
+            const data = {
+                age: 30,
+                annualSalary: 150000,
+                t2: 1.4,
+                t3: 1.2,
+                wageGrowthRate: 3.9
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE}/optimize-contribution`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                showResult({ request: data, response: result });
+            } catch (error) {
+                showResult({ error: error.message });
+            }
+        }
+        
+        async function testNPV() {
+            const data = {
+                age: 30,
+                annualSalary: 150000,
+                contributionAmount: 9500,
+                t2: 1.4,
+                t3: 1.2,
+                wageGrowthRate: 3.9
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE}/calculate-npv`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                showResult({ request: data, response: result });
+            } catch (error) {
+                showResult({ error: error.message });
+            }
+        }
+        
+        async function testDiagnose() {
+            const data = {
+                historyData: [
+                    { year: 2022, salary: 120000, contribution: 8000 },
+                    { year: 2023, salary: 135000, contribution: 10000 },
+                    { year: 2024, salary: 150000, contribution: 12000 }
+                ],
+                age: 30
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE}/diagnose-history`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                showResult({ request: data, response: result });
+            } catch (error) {
+                showResult({ error: error.message });
+            }
+        }
+        
+        async function testLifecycle() {
+            const data = {
+                age: 30,
+                annualSalary: 150000,
+                contributionAmount: 9500,
+                t2: 1.4,
+                t3: 1.2,
+                wageGrowthRate: 3.9
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE}/lifecycle-data`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                showResult({ 
+                    request: data, 
+                    response: {
+                        success: result.success,
+                        summary: result.summary,
+                        dataPoints: `缴费期${result.contributionPhase?.years?.length || 0}年 + 领取期${result.withdrawalPhase?.years?.length || 0}年`
+                    }
+                });
+            } catch (error) {
+                showResult({ error: error.message });
+            }
+        }
+        
+        async function testComparison() {
+            const data = {
+                age: 30,
+                annualSalary: 150000,
+                t2: 1.4,
+                t3: 1.2,
+                wageGrowthRate: 3.9
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE}/comparison-scenarios`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                showResult({ request: data, response: result });
+            } catch (error) {
+                showResult({ error: error.message });
+            }
+        }
+        
+        async function testRisk() {
+            const data = {
+                annualSalary: 600000,
+                t2: 8.0,
+                t3: 12.5,
+                contributionAmount: 12000,
+                age: 45
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE}/risk-assessment`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                showResult({ request: data, response: result });
+            } catch (error) {
+                showResult({ error: error.message });
+            }
+        }
+        
+        async function testOptimalCap() {
+            const data = {
+                annualSalary: 500000,
+                t2: 8.0,
+                age: 45
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE}/optimal-cap`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                showResult({ request: data, response: result });
+            } catch (error) {
+                showResult({ error: error.message });
+            }
+        }
+        
+        async function testFiscal() {
+            const data = {
+                age: 30,
+                annualSalary: 150000,
+                contributionAmount: 9500,
+                t2: 1.4,
+                t3: 1.2,
+                wageGrowthRate: 3.9
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE}/fiscal-analysis`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                showResult({ request: data, response: result });
+            } catch (error) {
+                showResult({ error: error.message });
+            }
+        }
+        
+        // 页面加载时检查服务器状态
+        window.onload = checkServerStatus;
+    </script>
+</body>
+</html>

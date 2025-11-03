@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API测试 - AIPPOF</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #7c3aed;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #6d28d9;
+        }
+        pre {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .success { color: #10b981; font-weight: bold; }
+        .error { color: #ef4444; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>🧪 AIPPOF API 测试工具</h1>
+    
+    <div class="test-section">
+        <h2>1. 健康检查</h2>
+        <button onclick="testHealth()">测试 /health</button>
+        <div id="health-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. 工资增长率预测</h2>
+        <button onclick="testWageGrowth()">测试 /api/predict-wage-growth</button>
+        <div id="wage-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. 缴费方案优化</h2>
+        <button onclick="testOptimize()">测试 /api/optimize-contribution</button>
+        <div id="optimize-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. 完整流程测试（模拟前端）</h2>
+        <button onclick="testFullFlow()">运行完整流程</button>
+        <div id="flow-result"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+
+        async function testHealth() {
+            const resultDiv = document.getElementById('health-result');
+            resultDiv.innerHTML = '<p>⏳ 测试中...</p>';
+            
+            try {
+                const response = await axios.get(`${API_BASE}/health`);
+                resultDiv.innerHTML = `
+                    <p class="success">✅ 成功</p>
+                    <pre>${JSON.stringify(response.data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <p class="error">❌ 失败</p>
+                    <pre>${error.message}\n${error.response ? JSON.stringify(error.response.data, null, 2) : ''}</pre>
+                `;
+            }
+        }
+
+        async function testWageGrowth() {
+            const resultDiv = document.getElementById('wage-result');
+            resultDiv.innerHTML = '<p>⏳ 测试中...</p>';
+            
+            const testData = {
+                age: 30,
+                annualSalary: 150000,
+                industry: 'it',
+                jobLevel: 'intermediate'
+            };
+            
+            try {
+                const response = await axios.post(`${API_BASE}/api/predict-wage-growth`, testData);
+                resultDiv.innerHTML = `
+                    <p class="success">✅ 成功</p>
+                    <p>请求数据：</p>
+                    <pre>${JSON.stringify(testData, null, 2)}</pre>
+                    <p>响应数据：</p>
+                    <pre>${JSON.stringify(response.data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <p class="error">❌ 失败</p>
+                    <pre>${error.message}\n${error.response ? JSON.stringify(error.response.data, null, 2) : ''}</pre>
+                `;
+            }
+        }
+
+        async function testOptimize() {
+            const resultDiv = document.getElementById('optimize-result');
+            resultDiv.innerHTML = '<p>⏳ 测试中...</p>';
+            
+            const testData = {
+                age: 30,
+                annualSalary: 150000,
+                wageGrowthRate: 0.045 // 4.5%
+            };
+            
+            try {
+                const response = await axios.post(`${API_BASE}/api/optimize-contribution`, testData);
+                resultDiv.innerHTML = `
+                    <p class="success">✅ 成功</p>
+                    <p>请求数据：</p>
+                    <pre>${JSON.stringify(testData, null, 2)}</pre>
+                    <p>响应数据（前3个方案）：</p>
+                    <pre>${JSON.stringify({
+                        scenarios: response.data.scenarios.slice(0, 3),
+                        cap: response.data.cap,
+                        t2: response.data.t2,
+                        t3: response.data.t3
+                    }, null, 2)}</pre>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <p class="error">❌ 失败</p>
+                    <pre>${error.message}\n${error.response ? JSON.stringify(error.response.data, null, 2) : ''}</pre>
+                `;
+            }
+        }
+
+        async function testFullFlow() {
+            const resultDiv = document.getElementById('flow-result');
+            resultDiv.innerHTML = '<p>⏳ 执行完整流程...</p>';
+            
+            const formData = {
+                age: 30,
+                annualSalary: 150000,
+                industry: 'it',
+                jobLevel: 'intermediate'
+            };
+            
+            try {
+                // 步骤1：预测工资增长率
+                resultDiv.innerHTML += '<p>📊 步骤1: 预测工资增长率...</p>';
+                const growthResponse = await axios.post(`${API_BASE}/api/predict-wage-growth`, formData);
+                const predictedGrowth = growthResponse.data.predicted_growth_rate;
+                
+                resultDiv.innerHTML += `<p class="success">✅ 预测增长率: ${predictedGrowth.toFixed(2)}%</p>`;
+                
+                // 步骤2：优化缴费方案
+                resultDiv.innerHTML += '<p>🎯 步骤2: 计算最优缴费方案...</p>';
+                const optimizeResponse = await axios.post(`${API_BASE}/api/optimize-contribution`, {
+                    age: formData.age,
+                    annualSalary: formData.annualSalary,
+                    wageGrowthRate: predictedGrowth / 100
+                });
+                
+                const scenarios = optimizeResponse.data.scenarios.slice(0, 3);
+                
+                resultDiv.innerHTML += `
+                    <p class="success">✅ 返回${scenarios.length}个推荐方案</p>
+                    <p><strong>方案对比：</strong></p>
+                    <pre>${scenarios.map((s, i) => 
+                        `方案${i+1} (${s.label}):
+  缴费额: ¥${s.contribution.toLocaleString()}
+  预测T2: ${s.predictedT2}%
+  补贴: ¥${s.subsidy.toLocaleString()}
+  节税: ¥${s.taxSave?.toLocaleString() || 'N/A'}
+  NPV: ¥${s.npv.toLocaleString()}
+  理由: ${s.reasons.join(', ')}`
+                    ).join('\n\n')}</pre>
+                `;
+                
+                resultDiv.innerHTML += `
+                    <p><strong>个性化上限：</strong></p>
+                    <pre>${JSON.stringify(optimizeResponse.data.cap, null, 2)}</pre>
+                `;
+                
+                resultDiv.innerHTML += '<p class="success">🎉 完整流程执行成功！</p>';
+                
+            } catch (error) {
+                resultDiv.innerHTML += `
+                    <p class="error">❌ 流程失败</p>
+                    <pre>${error.message}\n${error.response ? JSON.stringify(error.response.data, null, 2) : ''}</pre>
+                `;
+            }
+        }
+
+        // 页面加载时自动测试健康检查
+        window.onload = function() {
+            testHealth();
+        };
+    </script>
+</body>
+</html>

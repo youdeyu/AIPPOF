@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PathA UI优化测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #2C2A4A 0%, #1A3A52 100%);
+            color: white;
+        }
+        .test-section {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .test-result {
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .success { color: #4ade80; }
+        .error { color: #f87171; }
+        .info { color: #60a5fa; }
+        button {
+            background: linear-gradient(135deg, #7c3aed, #a855f7);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-top: 10px;
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+        pre {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+        .metric {
+            display: inline-block;
+            margin-right: 20px;
+            padding: 8px 15px;
+            background: rgba(124, 58, 237, 0.2);
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .metric-label {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 12px;
+        }
+        .metric-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #a78bfa;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔬 PathA UI优化验证测试</h1>
+    <p>测试PathA的核心公式计算和展示</p>
+
+    <!-- 测试1: 工资预测API -->
+    <div class="test-section">
+        <h2>📊 测试1: AI工资增长预测</h2>
+        <p>测试基于行业/职级/年龄的工资增长率预测</p>
+        <button onclick="testWageGrowth()">运行测试</button>
+        <div id="test1-result" class="test-result"></div>
+    </div>
+
+    <!-- 测试2: 缴费优化API -->
+    <div class="test-section">
+        <h2>🎯 测试2: 缴费方案优化（含T2/T3/补贴/上限）</h2>
+        <p>测试多方案推荐，包含所有核心指标计算</p>
+        <button onclick="testOptimizeContribution()">运行测试</button>
+        <div id="test2-result" class="test-result"></div>
+    </div>
+
+    <!-- 测试3: T2计算 -->
+    <div class="test-section">
+        <h2>💰 测试3: T2税收优惠计算</h2>
+        <p>测试兰浩哥论文的T2公式（实际税收节约）</p>
+        <button onclick="testT2Calculation()">运行测试</button>
+        <div id="test3-result" class="test-result"></div>
+    </div>
+
+    <!-- 测试4: T3计算 -->
+    <div class="test-section">
+        <h2>📈 测试4: T3领取期税率计算</h2>
+        <p>测试双逻辑函数模型（0-14%范围）</p>
+        <button onclick="testT3Calculation()">运行测试</button>
+        <div id="test4-result" class="test-result"></div>
+    </div>
+
+    <!-- 测试5: 精准补贴计算 -->
+    <div class="test-section">
+        <h2>🎁 测试5: 精准补贴计算</h2>
+        <p>测试渐进式补贴机制（两档配比+taper递减）</p>
+        <button onclick="testSubsidyCalculation()">运行测试</button>
+        <div id="test5-result" class="test-result"></div>
+    </div>
+
+    <!-- 测试6: 缴费上限计算 -->
+    <div class="test-section">
+        <h2>🔒 测试6: 缴费上限计算</h2>
+        <p>测试Formula 5-5混合动态上限模型</p>
+        <button onclick="testCapCalculation()">运行测试</button>
+        <div id="test6-result" class="test-result"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000/api';
+
+        async function testWageGrowth() {
+            const result = document.getElementById('test1-result');
+            result.innerHTML = '<span class="info">⏳ 测试中...</span>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/predict-wage-growth`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        age: 30,
+                        annualSalary: 150000,
+                        industry: 'it',
+                        jobLevel: 'intermediate'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                result.innerHTML = `
+                    <span class="success">✅ 测试通过</span>
+                    <div class="metric">
+                        <div class="metric-label">预测工资增长率</div>
+                        <div class="metric-value">${data.predicted_growth_rate.toFixed(2)}%</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">行业因子</div>
+                        <div class="metric-value">${data.factors.industry_factor.toFixed(2)}</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">职级因子</div>
+                        <div class="metric-value">${data.factors.job_level_factor.toFixed(2)}</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">年龄因子</div>
+                        <div class="metric-value">${data.factors.age_factor.toFixed(2)}</div>
+                    </div>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                result.innerHTML = `<span class="error">❌ 测试失败: ${error.message}</span>`;
+            }
+        }
+
+        async function testOptimizeContribution() {
+            const result = document.getElementById('test2-result');
+            result.innerHTML = '<span class="info">⏳ 测试中...</span>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/optimize-contribution`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        age: 30,
+                        annualSalary: 150000,
+                        wageGrowthRate: 4.5
+                    })
+                });
+                
+                const data = await response.json();
+                
+                let scenariosHtml = '';
+                data.scenarios.forEach((s, idx) => {
+                    scenariosHtml += `
+                        <div style="margin-top: 15px; padding: 10px; background: rgba(124, 58, 237, ${idx === 0 ? 0.2 : 0.1}); border-radius: 4px;">
+                            <strong>方案${idx + 1} (${s.label || 'N/A'})</strong><br>
+                            缴费: ¥${s.contribution.toLocaleString()}, 
+                            T2: ${s.predictedT2}%, 
+                            补贴: ¥${s.subsidy.toFixed(0)}, 
+                            NPV: ¥${s.npv.toLocaleString()}
+                        </div>
+                    `;
+                });
+                
+                result.innerHTML = `
+                    <span class="success">✅ 测试通过</span>
+                    <div class="metric">
+                        <div class="metric-label">T2率</div>
+                        <div class="metric-value">${data.t2.toFixed(1)}%</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">T3率</div>
+                        <div class="metric-value">${(data.t3 * 100).toFixed(1)}%</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">缴费上限</div>
+                        <div class="metric-value">¥${data.cap.personalCap.toLocaleString()}</div>
+                    </div>
+                    ${scenariosHtml}
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                result.innerHTML = `<span class="error">❌ 测试失败: ${error.message}</span>`;
+            }
+        }
+
+        async function testT2Calculation() {
+            const result = document.getElementById('test3-result');
+            result.innerHTML = '<span class="info">⏳ 测试中...</span>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/calculate-t2`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        age: 30,
+                        annualSalary: 150000,
+                        wageGrowthRate: 4.5
+                    })
+                });
+                
+                const data = await response.json();
+                
+                result.innerHTML = `
+                    <span class="success">✅ 测试通过</span>
+                    <div class="metric">
+                        <div class="metric-label">T2税收优惠率</div>
+                        <div class="metric-value">${data.t2.toFixed(2)}%</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">公式来源</div>
+                        <div class="metric-value">${data.formula}</div>
+                    </div>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                result.innerHTML = `<span class="error">❌ 测试失败: ${error.message}</span>`;
+            }
+        }
+
+        async function testT3Calculation() {
+            const result = document.getElementById('test4-result');
+            result.innerHTML = '<span class="info">⏳ 测试中...</span>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/calculate-t3`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        t2: 10.0,
+                        annualSalary: 150000,
+                        age: 30
+                    })
+                });
+                
+                const data = await response.json();
+                
+                result.innerHTML = `
+                    <span class="success">✅ 测试通过</span>
+                    <div class="metric">
+                        <div class="metric-label">T3领取期税率</div>
+                        <div class="metric-value">${data.t3.toFixed(2)}%</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">公式模型</div>
+                        <div class="metric-value">${data.formula}</div>
+                    </div>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                result.innerHTML = `<span class="error">❌ 测试失败: ${error.message}</span>`;
+            }
+        }
+
+        async function testSubsidyCalculation() {
+            const result = document.getElementById('test5-result');
+            result.innerHTML = '<span class="info">⏳ 测试中...</span>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/calculate-subsidy`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        annualSalary: 70000,
+                        contributionAmount: 8000
+                    })
+                });
+                
+                const data = await response.json();
+                
+                result.innerHTML = `
+                    <span class="success">✅ 测试通过</span>
+                    <div class="metric">
+                        <div class="metric-label">补贴金额</div>
+                        <div class="metric-value">¥${data.subsidy.toFixed(0)}</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">补贴率</div>
+                        <div class="metric-value">${data.ratio.toFixed(1)}%</div>
+                    </div>
+                    <div style="margin-top: 15px; padding: 10px; background: rgba(0, 0, 0, 0.3); border-radius: 4px;">
+                        <strong>详细拆分:</strong><br>
+                        基础补贴: ¥${data.breakdown.baseGrant.toFixed(0)}<br>
+                        首档配比: ¥${data.breakdown.tier1Match.toFixed(0)}<br>
+                        超额配比: ¥${data.breakdown.tier2Match.toFixed(0)}<br>
+                        递减因子: ${data.breakdown.taperFactor.toFixed(2)}
+                    </div>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                result.innerHTML = `<span class="error">❌ 测试失败: ${error.message}</span>`;
+            }
+        }
+
+        async function testCapCalculation() {
+            const result = document.getElementById('test6-result');
+            result.innerHTML = '<span class="info">⏳ 测试中...</span>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/calculate-cap`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        annualSalary: 150000,
+                        t2Rate: 10.0
+                    })
+                });
+                
+                const data = await response.json();
+                
+                result.innerHTML = `
+                    <span class="success">✅ 测试通过</span>
+                    <div class="metric">
+                        <div class="metric-label">缴费上限</div>
+                        <div class="metric-value">¥${data.cap.toLocaleString()}</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">策略</div>
+                        <div class="metric-value">${data.strategy}</div>
+                    </div>
+                    <div style="margin-top: 15px; padding: 10px; background: rgba(0, 0, 0, 0.3); border-radius: 4px;">
+                        <strong>详细拆分:</strong><br>
+                        动态上限: ¥${data.details.dynamicCap.toLocaleString()}<br>
+                        固定上限(原始): ¥${data.details.fixedRaw.toLocaleString()}<br>
+                        高收入递减因子: ${data.details.tau}<br>
+                        固定上限(有效): ¥${data.details.fixedEffective.toLocaleString()}<br>
+                        采用通道: ${data.details.usedChannel}
+                    </div>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                result.innerHTML = `<span class="error">❌ 测试失败: ${error.message}</span>`;
+            }
+        }
+
+        // 页面加载后自动提示
+        window.onload = () => {
+            console.log('PathA UI优化测试页面加载完成');
+            console.log('点击各个测试按钮验证API功能');
+        };
+    </script>
+</body>
+</html>
