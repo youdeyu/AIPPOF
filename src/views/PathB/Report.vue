@@ -532,7 +532,10 @@ onMounted(async () => {
       currentAmount: yearsData[yearsData.length - 1]?.contribution || 12000,
       historicalDetails: {
         t2ByYear: diagnosisData.historicalDetails?.t2ByYear || [],
-        subsidyByYear: diagnosisData.historicalDetails?.subsidyByYear || []
+        subsidyByYear: diagnosisData.historicalDetails?.subsidyByYear || [],
+        averageSalary: diagnosisData.historicalDetails?.averageSalary || 0,
+        averageContribution: diagnosisData.historicalDetails?.averageContribution || 0,
+        totalContribution: diagnosisData.historicalDetails?.totalContribution || 0
       }
     }
     

@@ -213,7 +213,16 @@
         </div>
 
         <!-- 提交按钮 -->
-        <div v-if="inputMethod" class="flex justify-center mt-8">
+        <div v-if="inputMethod" class="flex justify-center mt-8 gap-4">
+          <!-- 测试数据快速填充按钮 -->
+          <button 
+            v-if="inputMethod === 'manual'"
+            @click="fillTestData" 
+            class="px-6 py-3 rounded-lg bg-blue-500/20 border border-blue-400/50 text-blue-300 hover:bg-blue-500/30 transition-colors"
+          >
+            🧪 填充测试数据
+          </button>
+          
           <button @click="handleSubmit" class="btn-primary text-lg px-12" :disabled="!canSubmit">
             <span v-if="!isSubmitting">开始诊断分析</span>
             <span v-else>分析中...</span>
@@ -255,6 +264,17 @@ const manualData = ref<Record<number, { salary: number | null; contribution: num
   2023: { salary: null, contribution: null },
   2024: { salary: null, contribution: null }
 })
+
+// 测试数据填充函数
+const fillTestData = () => {
+  basicInfo.value.age = 27
+  basicInfo.value.industry = 'finance'
+  basicInfo.value.jobLevel = 'intermediate'
+  manualData.value[2022] = { salary: 200000, contribution: 12000 }
+  manualData.value[2023] = { salary: 210000, contribution: 13000 }
+  manualData.value[2024] = { salary: 220000, contribution: 15000 }
+  console.log('✅ 测试数据已填充')
+}
 
 const canSubmit = computed(() => {
   if (inputMethod.value === 'upload') {
