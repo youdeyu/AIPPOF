@@ -12,7 +12,13 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    host: '0.0.0.0', // 允许外部访问
     open: true,
+    allowedHosts: [
+      'aippof-0w0.lthero.com', // 您的域名
+      'localhost',
+      '.lthero.com' // 允许所有 lthero.com 子域名
+    ],
     proxy: {
       '/api': {
         target: 'http://localhost:8000',
