@@ -52,9 +52,24 @@ body {
   transition: all 0.3s ease;
 }
 
+/* 下拉框特殊样式 - 黑色文字 */
+select.input-field {
+  @apply text-gray-900;
+  background-color: rgba(255, 255, 255, 0.9);
+}
+
+select.input-field option {
+  @apply text-gray-900 bg-white;
+}
+
 .input-field:focus {
   @apply outline-none border-accent-purple bg-white/15;
   box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.2);
+}
+
+/* 下拉框聚焦时也保持黑色文字 */
+select.input-field:focus {
+  background-color: rgba(255, 255, 255, 0.95);
 }
 
 /* 滚动条样式 */
