@@ -109,11 +109,12 @@
         
         <div class="grid md:grid-cols-3 gap-6">
           <div v-for="(scenario, index) in reportData.scenarios" :key="index" 
+               :ref="el => { if (el) scenarioRefs[index] = el as HTMLElement }"
                class="border rounded-lg p-6 hover:border-accent-purple transition-all hover:shadow-lg"
                :class="index === 0 ? 'border-accent-purple bg-accent-purple/10' : 'border-white/20'">
-            <div class="text-center mb-4">
+            <div class="mb-4">
               <!-- 方案标签 -->
-              <div class="mb-3">
+              <div class="mb-3 text-center">
                 <span v-if="index === 0" class="px-3 py-1 bg-accent-purple/30 text-accent-purple rounded-full text-xs font-bold">
                   🏆 NPV最优
                 </span>
@@ -154,10 +155,35 @@
               </div>
               
               <!-- 推荐理由 -->
-              <div class="text-left space-y-2 text-xs text-white/70 bg-black/20 rounded p-3">
+              <div class="text-left space-y-2 text-xs text-white/70 bg-black/20 rounded p-3 mb-4">
                 <div v-for="(reason, idx) in scenario.reasons" :key="idx" class="leading-relaxed">
                   {{ reason }}
                 </div>
+              </div>
+              
+              <!-- 操作按钮 -->
+              <div class="flex gap-2">
+                <button 
+                  @click="selectScenario(scenario, index)"
+                  :class="[
+                    'flex-1 py-2 px-4 rounded-lg font-semibold transition-all',
+                    index === 0 
+                      ? 'bg-accent-purple text-white hover:bg-accent-purple/80' 
+                      : 'bg-white/10 text-white hover:bg-white/20'
+                  ]"
+                >
+                  {{ index === 0 ? '✓ 采纳方案1（最优）' : `选择方案${index + 1}` }}
+                </button>
+                
+                <button 
+                  @click="exportScenarioAsImage(scenario, index)"
+                  class="px-4 py-2 rounded-lg font-semibold transition-all bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 border border-blue-500/30"
+                  title="导出为图片"
+                >
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </button>
               </div>
             </div>
           </div>
@@ -306,6 +332,16 @@
       
       </div> <!-- 关闭报告内容容器 -->
     </div>
+    
+    <!-- Toast 通知 -->
+    <Toast 
+      :show="toast.show"
+      :type="toast.type"
+      :title="toast.title"
+      :message="toast.message"
+      :duration="toast.duration"
+      @close="toast.show = false"
+    />
   </div>
 </template>
 
@@ -314,6 +350,8 @@ import { ref, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'
 import FormulaExplanation from '@/components/FormulaExplanation.vue'
+import Toast from '@/components/Toast.vue'
+import html2canvas from 'html2canvas'
 
 const router = useRouter()
 const route = useRoute()
@@ -332,6 +370,27 @@ const formData = ref({
 // 加载状态
 const isLoading = ref(true)
 const errorMessage = ref('')
+const scenarioRefs = ref<HTMLElement[]>([])
+
+// Toast 通知状态
+const toast = ref({
+  show: false,
+  type: 'info' as 'success' | 'error' | 'warning' | 'info',
+  title: '',
+  message: '',
+  duration: 3000
+})
+
+// 显示通知
+const showToast = (type: 'success' | 'error' | 'warning' | 'info', title: string, message: string, duration = 3000) => {
+  toast.value = {
+    show: true,
+    type,
+    title,
+    message,
+    duration
+  }
+}
 
 // 报告数据（从后端API获取）
 const reportData = ref({
@@ -452,13 +511,65 @@ const goBack = () => {
   router.push('/path-a/input')
 }
 
+// 选择方案
+const selectScenario = (scenario: any, index: number) => {
+  const scenarioName = index === 0 ? '方案1（NPV最优）' : index === 1 ? '方案2（平衡）' : '方案3（保守）'
+  
+  showToast(
+    'success',
+    '方案已选择',
+    `您选择了【${scenarioName}】，年缴费额 ¥${scenario.contribution.toLocaleString()}，预期NPV ¥${scenario.npv.toLocaleString()}`
+  )
+  
+  console.log('用户选择方案:', scenarioName, scenario)
+}
+
+// 导出方案为图片
+const exportScenarioAsImage = async (scenario: any, index: number) => {
+  try {
+    showToast('info', '正在生成图片...', '请稍候', 1500)
+    
+    const element = scenarioRefs.value[index]
+    if (!element) {
+      throw new Error('无法找到方案元素')
+    }
+
+    // 使用 html2canvas 将DOM元素转换为canvas
+    const canvas = await html2canvas(element, {
+      backgroundColor: '#1A3A52',
+      scale: 2, // 提高清晰度
+      logging: false,
+      useCORS: true
+    })
+
+    // 将 canvas 转换为图片并下载
+    canvas.toBlob((blob) => {
+      if (blob) {
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        const scenarioName = index === 0 ? '方案1_NPV最优' : index === 1 ? '方案2_平衡' : '方案3_保守'
+        const timestamp = new Date().toISOString().slice(0, 10)
+        link.download = `AIPPOF_PathA_${scenarioName}_${timestamp}.png`
+        link.href = url
+        link.click()
+        URL.revokeObjectURL(url)
+        
+        showToast('success', '导出成功', `方案图片已保存为: ${link.download}`)
+      }
+    }, 'image/png')
+  } catch (err: any) {
+    console.error('导出图片失败:', err)
+    showToast('error', '导出失败', err.message || '图片生成过程中出现错误')
+  }
+}
+
 const handleAccept = () => {
   // TODO: 记录用户选择到数据库（用于A/B测试分析）
   console.log('用户采纳AI建议', {
     group: nudgeGroup.value,
     decision: 'accept'
   })
-  alert('感谢您的信任！系统将为您生成详细实施方案。')
+  showToast('success', '感谢您的信任！', '系统将为您生成详细实施方案', 4000)
 }
 
 const handleReject = () => {
@@ -467,7 +578,7 @@ const handleReject = () => {
     group: nudgeGroup.value,
     decision: 'reject'
   })
-  alert('我们尊重您的选择。您可以随时回来查看报告。')
+  showToast('info', '我们尊重您的选择', '您可以随时回来查看报告', 4000)
 }
 
 onMounted(() => {
