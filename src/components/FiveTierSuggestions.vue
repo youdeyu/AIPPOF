@@ -31,6 +31,7 @@
         <div 
           v-for="(tier, index) in tiers" 
           :key="index"
+          :ref="el => { if (el) tierRefs[index] = el as HTMLElement }"
           class="border rounded-lg p-6 transition-all hover:shadow-xl"
           :class="[
             index === 2 ? 'border-accent-purple bg-accent-purple/10 scale-105' : 'border-white/20 hover:border-accent-purple/50'
@@ -101,17 +102,29 @@
           </div>
 
           <!-- 选择按钮 -->
-          <button 
-            @click="selectTier(tier, index)"
-            :class="[
-              'w-full py-2 rounded-lg font-semibold transition-all',
-              index === 2 
-                ? 'bg-accent-purple text-white hover:bg-accent-purple/80' 
-                : 'bg-white/10 text-white hover:bg-white/20'
-            ]"
-          >
-            {{ index === 2 ? '✨ 选择推荐方案' : '选择此方案' }}
-          </button>
+          <div class="flex gap-2">
+            <button 
+              @click="selectTier(tier, index)"
+              :class="[
+                'flex-1 py-2 rounded-lg font-semibold transition-all',
+                index === 2 
+                  ? 'bg-accent-purple text-white hover:bg-accent-purple/80' 
+                  : 'bg-white/10 text-white hover:bg-white/20'
+              ]"
+            >
+              {{ index === 2 ? '✨ 选择推荐方案' : '选择此方案' }}
+            </button>
+            
+            <button 
+              @click="exportTierAsImage(tier, index)"
+              class="px-4 py-2 rounded-lg font-semibold transition-all bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 border border-blue-500/30"
+              title="导出为图片"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         <!-- 方案对比说明 -->
@@ -134,12 +147,24 @@
         </div>
       </div>
     </div>
+    
+    <!-- Toast 通知 -->
+    <Toast 
+      :show="toast.show"
+      :type="toast.type"
+      :title="toast.title"
+      :message="toast.message"
+      :duration="toast.duration"
+      @close="toast.show = false"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
 import { API_ENDPOINTS } from '../config'
+import Toast from './Toast.vue'
+import html2canvas from 'html2canvas'
 
 interface Tier {
   name: string
@@ -170,6 +195,27 @@ const emit = defineEmits<{
 const isLoading = ref(false)
 const error = ref('')
 const tiers = ref<Tier[]>([])
+const tierRefs = ref<HTMLElement[]>([])
+
+// Toast 通知状态
+const toast = ref({
+  show: false,
+  type: 'info' as 'success' | 'error' | 'warning' | 'info',
+  title: '',
+  message: '',
+  duration: 3000
+})
+
+// 显示通知
+const showToast = (type: 'success' | 'error' | 'warning' | 'info', title: string, message: string, duration = 3000) => {
+  toast.value = {
+    show: true,
+    type,
+    title,
+    message,
+    duration
+  }
+}
 
 // 加载5档方案
 const load5TierSuggestions = async () => {
@@ -220,7 +266,50 @@ const load5TierSuggestions = async () => {
 // 选择方案
 const selectTier = (tier: Tier, index: number) => {
   emit('selectTier', tier, index)
+  showToast(
+    'success', 
+    '方案已选择', 
+    `您选择了【${tier.name}】，年缴费额 ¥${tier.contribution.toLocaleString()}，预期NPV ¥${tier.npv.toLocaleString()}`
+  )
   console.log('用户选择方案:', tier.name, tier.contribution)
+}
+
+// 导出方案为图片
+const exportTierAsImage = async (tier: Tier, index: number) => {
+  try {
+    showToast('info', '正在生成图片...', '请稍候', 1500)
+    
+    const element = tierRefs.value[index]
+    if (!element) {
+      throw new Error('无法找到方案元素')
+    }
+
+    // 使用 html2canvas 将DOM元素转换为canvas
+    const canvas = await html2canvas(element, {
+      backgroundColor: '#1A3A52',
+      scale: 2, // 提高清晰度
+      logging: false,
+      useCORS: true
+    })
+
+    // 将 canvas 转换为图片并下载
+    canvas.toBlob((blob) => {
+      if (blob) {
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        const timestamp = new Date().toISOString().slice(0, 10)
+        link.download = `AIPPOF_${tier.name}_${timestamp}.png`
+        link.href = url
+        link.click()
+        URL.revokeObjectURL(url)
+        
+        showToast('success', '导出成功', `方案图片已保存为: ${link.download}`)
+      }
+    }, 'image/png')
+  } catch (err: any) {
+    console.error('导出图片失败:', err)
+    showToast('error', '导出失败', err.message || '图片生成过程中出现错误')
+  }
 }
 
 // 监听参数变化

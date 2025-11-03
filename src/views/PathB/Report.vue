@@ -202,6 +202,16 @@
       </div>
     </div><!-- 关闭 v-else -->
     </div>
+    
+    <!-- Toast 通知 -->
+    <Toast 
+      :show="toast.show"
+      :type="toast.type"
+      :title="toast.title"
+      :message="toast.message"
+      :duration="toast.duration"
+      @close="toast.show = false"
+    />
   </div>
 </template>
 
@@ -222,6 +232,7 @@ import {
 import EfficiencyScoreDisplay from '@/components/EfficiencyScoreDisplay.vue'
 import AIDiagnosis from '@/components/AIDiagnosis.vue'
 import FiveTierSuggestions from '@/components/FiveTierSuggestions.vue'
+import Toast from '@/components/Toast.vue'
 
 // 注册ECharts组件
 use([
@@ -240,6 +251,26 @@ const route = useRoute()
 // 从route query获取用户基本信息
 const userAge = ref(30)
 const userSalary = ref(150000)
+
+// Toast 通知状态
+const toast = ref({
+  show: false,
+  type: 'info' as 'success' | 'error' | 'warning' | 'info',
+  title: '',
+  message: '',
+  duration: 3000
+})
+
+// 显示通知
+const showToast = (type: 'success' | 'error' | 'warning' | 'info', title: string, message: string, duration = 3000) => {
+  toast.value = {
+    show: true,
+    type,
+    title,
+    message,
+    duration
+  }
+}
 
 // 诊断报告数据(从后端API获取)
 const reportData = ref({
@@ -466,8 +497,7 @@ const getEfficiencyLabel = (score: number): string => {
 // 处理5档方案选择
 const handleTierSelection = (tier: any, index: number) => {
   console.log('用户选择方案:', tier.name, '缴费额:', tier.contribution)
-  // TODO: 可以在这里记录用户选择,或跳转到下一步
-  alert(`您选择了${tier.name}方案\n年度缴费: ¥${tier.contribution.toLocaleString()}\nNPV: ¥${tier.npv.toLocaleString()}`)
+  // 此处的通知已由 FiveTierSuggestions 组件内部处理
 }
 
 // 页面加载时调用后端API获取真实数据
@@ -543,7 +573,7 @@ onMounted(async () => {
     
   } catch (error) {
     console.error('❌ 调用历史诊断API失败:', error)
-    alert('加载诊断数据失败，请返回重试')
+    showToast('error', '加载失败', '诊断数据加载失败，请返回重试', 5000)
   } finally {
     isLoading.value = false
   }
