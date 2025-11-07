@@ -349,6 +349,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'
+import { API_BASE_URL } from '@/config'
 import FormulaExplanation from '@/components/FormulaExplanation.vue'
 import Toast from '@/components/Toast.vue'
 import html2canvas from 'html2canvas'
@@ -422,7 +423,7 @@ const loadPredictionData = async () => {
   
   try {
     // 第1步：调用工资预测API
-    const growthResponse = await axios.post('http://localhost:8000/api/predict-wage-growth', {
+    const growthResponse = await axios.post(`${API_BASE_URL}/api/predict-wage-growth`, {
       age: formData.value.age,
       annualSalary: formData.value.annualSalary,
       industry: formData.value.industry,
@@ -433,7 +434,7 @@ const loadPredictionData = async () => {
     reportData.value.predictedGrowth = parseFloat(growthData.predicted_growth_rate.toFixed(2))
     
     // 第2步：调用缴费方案优化API
-    const optimizeResponse = await axios.post('http://localhost:8000/api/optimize-contribution', {
+    const optimizeResponse = await axios.post(`${API_BASE_URL}/api/optimize-contribution`, {
       age: formData.value.age,
       annualSalary: formData.value.annualSalary,
       wageGrowthRate: reportData.value.predictedGrowth / 100 // 转换为小数

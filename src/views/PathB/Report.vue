@@ -219,6 +219,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'
+import { API_BASE_URL } from '@/config'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
@@ -537,7 +538,7 @@ onMounted(async () => {
     console.log('👤 用户信息:', { userAge: userAge.value, userSalary: userSalary.value })
     
     // 调用历史诊断API (修复字段名匹配后端期望)
-    const diagnosisResponse = await axios.post('http://localhost:8000/api/diagnose-history', {
+    const diagnosisResponse = await axios.post(`${API_BASE_URL}/api/diagnose-history`, {
       historyData: yearsData,  // 后端期望 historyData 不是 years_data
       age: age                 // 后端期望 age 不是 current_age
     })

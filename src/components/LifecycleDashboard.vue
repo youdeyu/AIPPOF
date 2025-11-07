@@ -104,6 +104,7 @@
 import { ref, onMounted, watch } from 'vue'
 import * as echarts from 'echarts'
 import axios from 'axios'
+import { API_BASE_URL } from '@/config'
 
 interface Props {
   params: {
@@ -158,12 +159,12 @@ async function loadData() {
   loading.value = true
   try {
     // 加载生命周期数据
-    const response1 = await axios.post('http://localhost:8000/api/lifecycle-data', props.params)
+    const response1 = await axios.post(`${API_BASE_URL}/api/lifecycle-data`, props.params)
     lifecycleData.value = response1.data
     summary.value = response1.data.summary
 
     // 加载对比场景数据
-    const response2 = await axios.post('http://localhost:8000/api/comparison-scenarios', props.params)
+    const response2 = await axios.post(`${API_BASE_URL}/api/comparison-scenarios`, props.params)
     comparisonData.value = response2.data
   } catch (error) {
     console.error('加载数据失败:', error)

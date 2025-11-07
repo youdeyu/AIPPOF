@@ -241,6 +241,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { API_BASE_URL } from '@/config'
 
 const router = useRouter()
 
@@ -333,7 +334,7 @@ const handleSubmit = async () => {
       
       // 调用AI工资增长率预测API
       try {
-        const response = await fetch('http://localhost:8000/api/predict-wage-growth', {
+        const response = await fetch(`${API_BASE_URL}/api/predict-wage-growth`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
