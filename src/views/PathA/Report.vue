@@ -398,23 +398,13 @@ const reportData = ref({
   predictedGrowth: 0,
   recommendedAmount: 0,
   subsidyAmount: 0,
-  predictedT3: 3.0, // 固定领取期税率
+  predictedT3: '3.0', // 固定领取期税率（字符串类型）
   age: formData.value.age,
   annualSalary: formData.value.annualSalary,
   cap: null as any,
   scenarios: [] as any[],
   subsidyTierInfo: null as any // 补贴档位信息
 })
-
-// 全生命周期可视化参数
-const lifecycleParams = computed(() => ({
-  age: reportData.value.age,
-  annualSalary: reportData.value.annualSalary,
-  contributionAmount: reportData.value.recommendedAmount,
-  t2: reportData.value.scenarios[0]?.predictedT2 || 0,
-  t3: reportData.value.predictedT3,
-  wageGrowthRate: reportData.value.predictedGrowth
-}))
 
 // 加载数据函数
 const loadPredictionData = async () => {
@@ -526,7 +516,7 @@ const selectScenario = (scenario: any, index: number) => {
 }
 
 // 导出方案为图片
-const exportScenarioAsImage = async (scenario: any, index: number) => {
+const exportScenarioAsImage = async (_scenario: any, index: number) => {
   try {
     showToast('info', '正在生成图片...', '请稍候', 1500)
     

@@ -260,7 +260,7 @@ interface Props {
   wageGrowth?: number
 }
 
-const props = withDefaults(defineProps<Props>(), {
+withDefaults(defineProps<Props>(), {
   title: '📐 核心公式详解',
   showT2: true,
   showT3: true,

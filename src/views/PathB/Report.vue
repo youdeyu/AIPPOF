@@ -290,7 +290,9 @@ const reportData = ref({
   currentAmount: 0,
   historicalDetails: {
     t2ByYear: [] as Array<{year: number, t2: number, contribution: number, salary: number}>,
-    subsidyByYear: [] as Array<{year: number, subsidy: number, contribution: number, salary: number}>
+    subsidyByYear: [] as Array<{year: number, subsidy: number, contribution: number, salary: number}>,
+    averageSalary: 0,
+    averageContribution: 0
   }
 })
 
@@ -481,22 +483,8 @@ const goBack = () => {
   router.push('/path-b/input')
 }
 
-const getEfficiencyColor = (score: number): string => {
-  if (score >= 90) return 'text-green-400'
-  if (score >= 70) return 'text-blue-400'
-  if (score >= 50) return 'text-yellow-400'
-  return 'text-red-400'
-}
-
-const getEfficiencyLabel = (score: number): string => {
-  if (score >= 90) return '优秀'
-  if (score >= 70) return '良好'
-  if (score >= 50) return '一般'
-  return '待改进'
-}
-
 // 处理5档方案选择
-const handleTierSelection = (tier: any, index: number) => {
+const handleTierSelection = (tier: any, _index: number) => {
   console.log('用户选择方案:', tier.name, '缴费额:', tier.contribution)
   // 此处的通知已由 FiveTierSuggestions 组件内部处理
 }
