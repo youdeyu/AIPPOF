@@ -18,19 +18,22 @@ from typing import Dict, Any
 
 @dataclass
 class SubsidyParams:
-    """精准补贴参数配置"""
+    """精准补贴参数配置 - 三段式补贴模型"""
     # 基础参数
     base_grant: float = 150.0          # 固定补贴（元）
     c_min: float = 200.0               # 最低缴费额（元）
-    c0_ratio_of_wage: float = 0.02     # 第一档缴费基数比例（2%工资）
     
-    # 匹配比例（两档）
-    ratio_low: float = 0.30            # 低档匹配率（首档缴费）
-    ratio_high: float = 0.06           # 高档匹配率（超额缴费）
+    # 三段式分段点（对应论文中的 C̅₁ 和 C̅₂）
+    c_bar_1: float = 1600.0            # 第一分段点（首档上限，约2%×80k）
+    c_bar_2: float = 6000.0            # 第二分段点（超额上限）
     
-    # 低收入倾斜
-    uplift_low: float = 0.5            # 低收入加成比例（首档配比+50%）
-    low_income_cut: float = 80000.0    # 低收入界定标准（元/年）
+    # 三段式匹配比例（对应论文中的 α₁, α₂, α₃）
+    alpha_1: float = 0.45              # 第一段配比率（0 < C ≤ C̅₁）
+    alpha_2: float = 0.30              # 第二段配比率（C̅₁ < C ≤ C̅₂）
+    alpha_3: float = 0.06              # 第三段配比率（C > C̅₂）
+    
+    # T2触发阈值（对应论文中的 τ₀）
+    t2_threshold: float = 0.05         # T2 ≤ 5% 时触发补贴
     
     # 补贴递减（平滑过渡）
     taper_mode: bool = True            # 启用收入递减
@@ -47,7 +50,12 @@ def calculate_subsidy(
     params: SubsidyParams = None
 ) -> Dict[str, Any]:
     """
-    计算渐进式精准补贴
+    计算渐进式精准补贴 - 三段式模型（符合论文公式5-12）
+    
+    公式:
+         ⎧ α₁C,                                    0 < C ≤ C̅₁
+    S = ⎨ α₁C̅₁ + α₂(C - C̅₁),                   C̅₁ < C ≤ C̅₂  
+         ⎩ α₁C̅₁ + α₂(C̅₂ - C̅₁) + α₃(C - C̅₂),   C > C̅₂
     
     参数:
         annual_salary: 年工资收入（元）
@@ -62,10 +70,11 @@ def calculate_subsidy(
             'triggered': 是否触发补贴（bool）,
             'breakdown': {  # 补贴明细
                 'base_grant': 固定补贴（元）,
-                'tier1_match': 首档配比补贴（元）,
-                'tier2_match': 超额配比补贴（元）,
+                'tier1_subsidy': 第一段补贴（元）,
+                'tier2_subsidy': 第二段补贴（元）,
+                'tier3_subsidy': 第三段补贴（元）,
                 'taper_factor': 收入递减因子（0-1）,
-                'is_low_income': 是否享受低收入加成（bool）
+                'segment': 所属段数（1/2/3）
             }
         }
     """
@@ -95,25 +104,37 @@ def calculate_subsidy(
             }
         }
     
-    # 3. 计算两档缴费
     wage = float(annual_salary)
-    c0_threshold = params.c0_ratio_of_wage * wage  # 第一档上限
-    c0 = min(c_eff, c0_threshold)  # 首档缴费
-    c1 = max(0.0, c_eff - c0_threshold)  # 超额缴费
     
-    # 4. 计算配比率（低收入加成）
-    is_low_income = wage <= params.low_income_cut
-    ratio_low_effective = params.ratio_low
-    if is_low_income:
-        ratio_low_effective *= (1.0 + params.uplift_low)
+    # 3. 三段式补贴计算（论文公式5-12）
+    tier1_subsidy = 0.0
+    tier2_subsidy = 0.0
+    tier3_subsidy = 0.0
+    segment = 0
     
-    # 5. 计算补贴组成
-    base_grant = params.base_grant
-    tier1_match = ratio_low_effective * c0
-    tier2_match = params.ratio_high * c1
-    subsidy_raw = base_grant + tier1_match + tier2_match
+    if c_eff <= params.c_bar_1:
+        # 第一段：0 < C ≤ C̅₁，配比率 α₁ = 45%
+        tier1_subsidy = params.alpha_1 * c_eff
+        segment = 1
+    elif c_eff <= params.c_bar_2:
+        # 第二段：C̅₁ < C ≤ C̅₂，配比率 α₂ = 30%
+        tier1_subsidy = params.alpha_1 * params.c_bar_1
+        tier2_subsidy = params.alpha_2 * (c_eff - params.c_bar_1)
+        segment = 2
+    else:
+        # 第三段：C > C̅₂，配比率 α₃ = 6%
+        tier1_subsidy = params.alpha_1 * params.c_bar_1
+        tier2_subsidy = params.alpha_2 * (params.c_bar_2 - params.c_bar_1)
+        tier3_subsidy = params.alpha_3 * (c_eff - params.c_bar_2)
+        segment = 3
     
-    # 6. 收入递减调整
+    # 配比补贴总额
+    match_subsidy = tier1_subsidy + tier2_subsidy + tier3_subsidy
+    
+    # 4. 固定补贴 + 配比补贴
+    subsidy_raw = params.base_grant + match_subsidy
+    
+    # 5. 收入递减调整
     taper_factor = 1.0
     if params.taper_mode:
         if wage <= params.taper_w_low:
@@ -128,7 +149,7 @@ def calculate_subsidy(
     
     subsidy_final = subsidy_raw * taper_factor
     
-    # 7. 计算补贴率
+    # 6. 计算补贴率
     ratio = (subsidy_final / c_eff * 100) if c_eff > 0 else 0.0
     
     return {
@@ -137,16 +158,17 @@ def calculate_subsidy(
         'ratio': round(ratio, 2),
         'triggered': True,
         'breakdown': {
-            'base_grant': round(base_grant * taper_factor, 2),
-            'tier1_match': round(tier1_match * taper_factor, 2),
-            'tier2_match': round(tier2_match * taper_factor, 2),
+            'base_grant': round(params.base_grant * taper_factor, 2),
+            'tier1_subsidy': round(tier1_subsidy * taper_factor, 2),
+            'tier2_subsidy': round(tier2_subsidy * taper_factor, 2),
+            'tier3_subsidy': round(tier3_subsidy * taper_factor, 2),
             'taper_factor': round(taper_factor, 3),
-            'is_low_income': is_low_income,
-            'tier1_rate': round(ratio_low_effective * 100, 1),
-            'tier2_rate': round(params.ratio_high * 100, 1),
-            'c0_threshold': round(c0_threshold, 2),
-            'c0_amount': round(c0, 2),
-            'c1_amount': round(c1, 2)
+            'segment': segment,
+            'alpha_1': params.alpha_1,
+            'alpha_2': params.alpha_2,
+            'alpha_3': params.alpha_3,
+            'c_bar_1': params.c_bar_1,
+            'c_bar_2': params.c_bar_2
         }
     }
 
@@ -216,17 +238,19 @@ def get_subsidy_tier_info(annual_salary: float) -> Dict[str, Any]:
     """
     params = SubsidyParams()
     
-    # 判断收入层次
-    if annual_salary <= params.low_income_cut:
+    # 判断收入层次（基于taper机制）
+    low_income_threshold = params.taper_w_low  # 40000元
+    high_income_threshold = params.taper_w_high  # 100000元
+    
+    if annual_salary <= low_income_threshold:
         tier = "低收入"
         description = "主要激励：高额财政补贴"
-        base_rate = params.ratio_low * (1 + params.uplift_low) * 100
         advantages = [
-            f"享受 {base_rate:.0f}% 首档配比率（含50%加成）",
+            f"享受 {params.alpha_1 * 100:.0f}% 首档配比率（最高档）",
             f"固定补贴 ¥{params.base_grant:.0f} 元",
-            "补贴率可达 100%+ "
+            "全额补贴，无递减"
         ]
-    elif annual_salary >= params.taper_w_high:
+    elif annual_salary >= high_income_threshold:
         tier = "高收入"
         description = "主要激励：税收优惠减免"
         advantages = [
@@ -237,14 +261,11 @@ def get_subsidy_tier_info(annual_salary: float) -> Dict[str, Any]:
     else:
         tier = "中等收入"
         description = "双轨激励：补贴与税优并重"
-        if annual_salary < params.taper_w_low:
-            taper_pct = 100
-        else:
-            taper_pct = (params.taper_w_high - annual_salary) / (
-                params.taper_w_high - params.taper_w_low
-            ) * 100
+        taper_pct = (high_income_threshold - annual_salary) / (
+            high_income_threshold - low_income_threshold
+        ) * 100
         advantages = [
-            f"{params.ratio_low * 100:.0f}% 首档配比率",
+            f"三段式补贴：{params.alpha_1*100:.0f}% / {params.alpha_2*100:.0f}% / {params.alpha_3*100:.0f}%",
             f"补贴递减比例：{taper_pct:.0f}%",
             "税收优惠与补贴双重受益"
         ]
@@ -257,30 +278,3 @@ def get_subsidy_tier_info(annual_salary: float) -> Dict[str, Any]:
         'is_eligible': True  # 默认参与模式下都符合条件
     }
 
-
-# 测试代码
-if __name__ == "__main__":
-    # 测试案例
-    test_cases = [
-        {"salary": 30000, "contribution": 200, "name": "低收入最小缴费"},
-        {"salary": 50000, "contribution": 1000, "name": "低收入正常缴费"},
-        {"salary": 60000, "contribution": 5000, "name": "中等收入"},
-        {"salary": 150000, "contribution": 12000, "name": "高收入"},
-    ]
-    
-    print("=" * 60)
-    print("渐进式精准补贴计算测试")
-    print("=" * 60)
-    
-    for case in test_cases:
-        print(f"\n【{case['name']}】")
-        print(f"年工资：¥{case['salary']:,} | 缴费：¥{case['contribution']:,}")
-        print("-" * 60)
-        
-        result = calculate_subsidy(case['salary'], case['contribution'])
-        explanation = get_subsidy_explanation(result, case['salary'])
-        print(explanation)
-        
-        tier_info = get_subsidy_tier_info(case['salary'])
-        print(f"\n收入层次：{tier_info['tier']}")
-        print(f"激励方式：{tier_info['description']}")

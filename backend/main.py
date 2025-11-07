@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 # 导入计算模块
 from api.wage_growth_prediction import predict_wage_growth
 from api.t2_calculator import calculate_t2
-from api.t3_calculator import calculate_t3
+from api.policy_utils import calculate_t3
 from api.cap_calculator import calculate_contribution_cap
 from api.contribution_optimizer import optimize_contribution
 from api.npv_calculator import calculate_npv

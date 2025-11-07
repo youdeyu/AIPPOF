@@ -21,7 +21,10 @@ export default defineConfig({
     ],
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        // ✅ 使用环境变量或默认本地地址
+        // 生产环境：设置 VITE_API_URL=https://aippof-0w0.lthero.com/api
+        // 开发环境：默认 http://localhost:8000
+        target: process.env.VITE_API_URL || 'http://localhost:8000',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, '')
       }

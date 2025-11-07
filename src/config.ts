@@ -2,21 +2,27 @@
  * API配置
  * 
  * 使用说明：
- * - 本地开发：使用 localhost
- * - 局域网共享：使用本机IP地址（10.32.124.16）
- * - 生产环境：使用实际服务器地址
+ * - 本地开发：npm run dev → 使用 localhost:8000
+ * - 生产环境：npm run build → 使用环境变量 VITE_API_BASE_URL
+ * - 环境变量在 .env.production 中配置
  */
 
-// 自动检测：如果访问地址不是localhost，则使用当前host的IP
+// 优先使用环境变量，否则使用自动检测
 const getApiBaseUrl = () => {
+  // 1. 优先使用环境变量（构建时注入）
+  if (import.meta.env.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL
+  }
+  
+  // 2. 开发模式：自动检测当前访问地址
   const currentHost = window.location.hostname
   
-  // 如果是通过IP访问的，使用相同的IP访问API
+  // 如果是通过域名或IP访问的，使用相同地址的8000端口
   if (currentHost !== 'localhost' && currentHost !== '127.0.0.1') {
     return `http://${currentHost}:8000`
   }
   
-  // 默认使用localhost
+  // 3. 默认本地开发
   return 'http://localhost:8000'
 }
 
@@ -37,3 +43,5 @@ export const API_ENDPOINTS = {
 
 // 打印当前API地址（便于调试）
 console.log('🔧 API Base URL:', API_BASE_URL)
+console.log('🌍 Environment:', import.meta.env.MODE)
+

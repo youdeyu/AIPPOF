@@ -13,7 +13,7 @@ if __name__ == '__main__':
 
 from api.subsidy_calculator import calculate_subsidy
 from api.t2_calculator import calculate_t2_for_contribution
-from api.t3_calculator import calculate_t3
+from api.policy_utils import calculate_t3
 from api.cap_calculator import calculate_contribution_cap
 
 
